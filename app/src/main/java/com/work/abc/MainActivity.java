@@ -54,11 +54,31 @@ public class MainActivity extends AppCompatActivity {
         webView.setInitialScale(100); // 페이지 기본 확대/축소 설정
         webView.getSettings().setUseWideViewPort(true); // 메타태그지원활성화 or 넓은 뷰포트 사용 설정 (false인 경우 webview의 컨트롤 너비로 설정)
         webView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
+        webView.getSettings().setSupportMultipleWindows(true); // 카카오톡 설정
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); // 화면 세로고정
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) { // 페이지 컨트롤을 위한 기본적인 함수
-                view.loadUrl(url);
+                if(url.startsWith("intent:")){ // 카카오톡 설정
+                    try {
+                        Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                        Intent existPackage = getPackageManager().getLaunchIntentForPackage(intent.getPackage());
+                        if (existPackage != null) {
+                            startActivity(intent);
+                        } else {
+                            Log.d("ABC POKER ", "Could not parse anythings");
+//                            Intent marketIntent = new Intent(Intent.ACTION_VIEW);
+//                            marketIntent.setData(Uri.parse("market://details?id=" + intent.getPackage()));
+//                            startActivity(marketIntent);
+                        }
+
+                        return true;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }else {
+                    view.loadUrl(url);
+                }
                 return true;
             }
         });

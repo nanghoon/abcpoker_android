@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.work.abc">
+    <!-- 카카오톡 설정 -->
+    <queries>
+        <package android:name="com.kakao.talk" />
+    </queries>
 
     <uses-permission android:name="android.permission.INTERNET" /> <!-- 인터넷 설정 -->
     <!-- 카메라 설정 -->
@@ -30,7 +34,6 @@
             android:theme="@style/Theme.MaterialComponents.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
