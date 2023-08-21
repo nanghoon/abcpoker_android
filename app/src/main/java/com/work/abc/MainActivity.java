@@ -17,9 +17,12 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
@@ -32,6 +35,8 @@ import android.widget.Toast;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -56,6 +61,37 @@ public class MainActivity extends AppCompatActivity {
         webView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
         webView.getSettings().setSupportMultipleWindows(true); // 카카오톡 설정
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); // 화면 세로고정
+        getWindow().getDecorView().setSystemUiVisibility(
+                webView.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | webView.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | webView.SYSTEM_UI_FLAG_IMMERSIVE
+                        | webView.SYSTEM_UI_FLAG_FULLSCREEN
+                        | webView.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+        );
+        Timer timer = new Timer();
+        TimerTask tt = new TimerTask() {
+            @Override
+            public void run() {
+                runOnUiThread(new Runnable(){
+                    @Override
+                    public void run() {
+                        //소스
+                        //Log.d("ABC POKER " , "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
+                        getWindow().getDecorView().setSystemUiVisibility(
+                                webView.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                        | webView.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                                        | webView.SYSTEM_UI_FLAG_IMMERSIVE
+                                        | webView.SYSTEM_UI_FLAG_FULLSCREEN
+                                        | webView.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        );
+                    }
+                });
+            }
+
+        };
+
+        timer.schedule(tt, 0 , 3000);
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) { // 페이지 컨트롤을 위한 기본적인 함수
@@ -67,9 +103,9 @@ public class MainActivity extends AppCompatActivity {
                             startActivity(intent);
                         } else {
                             Log.d("ABC POKER ", "Could not parse anythings");
-//                            Intent marketIntent = new Intent(Intent.ACTION_VIEW);
-//                            marketIntent.setData(Uri.parse("market://details?id=" + intent.getPackage()));
-//                            startActivity(marketIntent);
+                            Intent marketIntent = new Intent(Intent.ACTION_VIEW);
+                            marketIntent.setData(Uri.parse("market://details?id=" + intent.getPackage())); // 카카오톡 마켓으로 이동
+                            startActivity(marketIntent);
                         }
 
                         return true;
