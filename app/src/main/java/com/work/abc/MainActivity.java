@@ -10,6 +10,7 @@ import androidx.core.content.FileProvider;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -32,7 +33,11 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Timer;
@@ -40,8 +45,9 @@ import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
+    String tag = "ABC POKER";
     private WebView webView;
-    //private String url_main = "http://1.234.66.89/abcpoker/allPage.do";
+    //private String url_main = "http://abc-pokertest.co.kr/abcpoker/allPage.do";
     private String url_main = "http://183.102.237.232:8080/abcpoker/allPage.do";
 
     @Override
@@ -76,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         //소스
-                        //Log.d("ABC POKER " , "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
+                        //Log.d(tag , "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
                         getWindow().getDecorView().setSystemUiVisibility(
                                 webView.SYSTEM_UI_FLAG_LAYOUT_STABLE
                                         | webView.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -102,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
                         if (existPackage != null) {
                             startActivity(intent);
                         } else {
-                            Log.d("ABC POKER ", "Could not parse anythings");
+                            Log.d(tag, "Could not parse anythings");
                             Intent marketIntent = new Intent(Intent.ACTION_VIEW);
                             marketIntent.setData(Uri.parse("market://details?id=" + intent.getPackage())); // 카카오톡 마켓으로 이동
                             startActivity(marketIntent);
@@ -145,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
 
     @JavascriptInterface
     public void appRestart(){
-        Log.d("ABC POKER " , "Call Restart...");
+        Log.d(tag , "Call Restart...");
         PackageManager packageManager = getPackageManager();
         Intent intent = packageManager.getLaunchIntentForPackage(getPackageName());
         ComponentName componentName = intent.getComponent();
@@ -153,6 +159,75 @@ public class MainActivity extends AppCompatActivity {
         startActivity(mainIntent);
         System.exit(0);
     }
+
+    // 로그인 정보 저장 관련 =====
+
+    private Context context; // 캐시
+
+    @JavascriptInterface
+    public int loginStat(){
+        Log.d(tag , "loginStat");
+        try{
+            FileInputStream fis = openFileInput("loginCache");
+            BufferedReader buffer = new BufferedReader(new InputStreamReader(fis));
+            String str = buffer.readLine();
+            return 1;
+        }catch (Exception e) {
+            return 0;
+        }
+    }
+    public static int saveUserIdx;
+    @JavascriptInterface
+    public void loginSave(int useridx , String id , String pw){
+        Log.d(tag, "function loginSave useridx : "+useridx + " id : " + id + " pw : " + pw + " id equals null " + (id.equals("null")));
+        if(useridx != 0 && !id.equals("null")){
+            FileOutputStream outputStream;
+            String fileContents = Integer.toString(useridx)+ ";" + id + ";" + pw;
+            saveUserIdx = useridx;
+            try {
+                outputStream = openFileOutput("loginCache" , context.MODE_PRIVATE);
+                outputStream.write(fileContents.getBytes());
+                outputStream.close();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
+
+    String loginId;
+    String loginPw;
+    @JavascriptInterface
+    public boolean askLogin(){
+        Log.d(tag , "askLogin...");
+        try{
+            FileInputStream fis = openFileInput("loginCache");
+            BufferedReader buffer = new BufferedReader(new InputStreamReader(fis));
+            String str = buffer.readLine();
+            saveUserIdx = Integer.parseInt(str.split(";")[0]);
+            loginId = str.split(";")[1];
+            loginPw = str.split(";")[2];
+            // 크로스 스래드문제 때문에  Runnable 구현 후 처리
+            webView.post(new Runnable() {
+                @Override
+                public void run() {
+                    webView.loadUrl("javascript:setLoginInfo('"+loginId+"','"+loginPw+"')"); // 로그인 정보 세팅
+                }
+            });
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return true;
+    }
+
+    @JavascriptInterface
+    public void delLogin(){
+        File dir = getFilesDir();
+        File file = new File(dir, "loginCache");
+        file.delete();
+    }
+
+    // ===== 로그인 정보 저장 관련
+
 
     // 카메라 / 파일
     // 파일 관련 함수
@@ -166,7 +241,7 @@ public class MainActivity extends AppCompatActivity {
     // 권한 체킹
 
     private void readFile(){
-        Log.d("ABC POKER APP " , "function runCamera...");
+        Log.d(tag , "function runCamera...");
 
         Intent intentCamera = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -202,7 +277,7 @@ public class MainActivity extends AppCompatActivity {
     //권한 획득 여부 확인
     @TargetApi(Build.VERSION_CODES.M)
     public void checkVerify() {
-        Log.d("ABC POKER APP", "function check verify...");
+        Log.d(tag, "function check verify...");
         if (checkSelfPermission(Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED ||
                 checkSelfPermission(Manifest.permission.ACCESS_NETWORK_STATE) != PackageManager.PERMISSION_GRANTED ||
                 checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
@@ -247,7 +322,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
     {
-        Log.d("dogAPP" , " ON NEW INTENT :::: onRequestPermissionsResult  requestCode : " + requestCode + " ,,,, REQUEST_CODE_FILE ::: " + REQUEST_CODE_FILE);
+        Log.d(tag , " ON NEW INTENT :::: onRequestPermissionsResult  requestCode : " + requestCode + " ,,,, REQUEST_CODE_FILE ::: " + REQUEST_CODE_FILE);
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 1)
         {
