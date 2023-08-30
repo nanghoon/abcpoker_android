@@ -378,14 +378,15 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         Log.e("URL " , " webView.getUrl() : " + url.getHost());
-        if (url.getHost().equals("1.234.66.89") || url.getHost().equals("183.102.237.232")) { // 내부앱일경우
+        if (url.getHost().equals("abc-pokertest.co.kr") || url.getHost().equals("183.102.237.232")) { // 내부앱일경우
             // 모든페이지에서 뒤로가기시 무조건 앱종료 안내문구 => 앱종료
-            if (0 <= intervalTime && FINISH_INTERNAL_TIME - 500 >= intervalTime) finish();
-            else {
-                backPressedTime = tempTime;
-                Toast.makeText(getApplicationContext(), "한번 더 누르면 앱이 종료됩니다.", Toast.LENGTH_SHORT).show();
-                //webView.loadUrl("javascript:openMsgConfirmPop(1,'mpop_confirm','','어플을 종료하시겠습니까?' , 'javascript:window.android.gameEnd()')");
-            }
+            webView.loadUrl("javascript:openMsgConfirmPop(1,'mpop_confirm','','어플을 종료하시겠습니까?' , 'javascript:window.android.gameEnd()')");
+//            if (0 <= intervalTime && FINISH_INTERNAL_TIME - 500 >= intervalTime) finish();
+//            else {
+//                backPressedTime = tempTime;
+//                Toast.makeText(getApplicationContext(), "한번 더 누르면 앱이 종료됩니다.", Toast.LENGTH_SHORT).show();
+//                //webView.loadUrl("javascript:openMsgConfirmPop(1,'mpop_confirm','','어플을 종료하시겠습니까?' , 'javascript:window.android.gameEnd()')");
+//            }
         } else { // 외부앱일경우 다시 뒤로가기
             webView.goBack();
         }
