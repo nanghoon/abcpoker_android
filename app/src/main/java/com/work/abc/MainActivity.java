@@ -74,6 +74,12 @@ public class MainActivity extends AppCompatActivity {
                         | webView.SYSTEM_UI_FLAG_FULLSCREEN
                         | webView.SYSTEM_UI_FLAG_HIDE_NAVIGATION
         );
+
+        // 결제
+        mainContext = this;
+        billingManager = new BillingManager(MainActivity.this);
+        // -- 결제
+        
         Timer timer = new Timer();
         TimerTask tt = new TimerTask() {
             @Override
@@ -397,4 +403,26 @@ public class MainActivity extends AppCompatActivity {
         finish();
         System.exit(0);
     }
+
+
+    // 결제
+    public static Context mainContext;
+    // 결제
+    BillingManager billingManager;
+
+    @JavascriptInterface
+    public void buyBtn(String buyId){
+        Log.e(tag , "BUY ID ::::::: " + buyId);
+        billingManager.purchase(this , buyId);
+    }
+
+    public void sendResult(String itemNm, String itemMoney) {
+        webView.post(new Runnable() {
+            @Override
+            public void run() {
+                Log.e(tag , "purchaseAjax..." + itemNm + " , " + itemMoney);
+                webView.loadUrl("javascript:purchaseAjax('"+itemNm+"' ,'"+itemMoney+"')"); // 결제완룐
+            }
+        });
+    };
 }

@@ -18,6 +18,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <!-- //카메라 설정 -->
 
+    <uses-permission android:name="com.android.vending.BILLING" /> <!-- 결제 -->
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
