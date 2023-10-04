@@ -9,6 +9,7 @@ import androidx.core.content.FileProvider;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -19,16 +20,21 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
@@ -50,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
     //private String url_main = "http://abc-pokertest.co.kr/abcpoker/allPage.do";
     private String url_main = "http://183.102.237.232:8080/abcpoker/allPage.do";
 
+    public Dialog dialog = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -65,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
         webView.setInitialScale(100); // 페이지 기본 확대/축소 설정
         webView.getSettings().setUseWideViewPort(true); // 메타태그지원활성화 or 넓은 뷰포트 사용 설정 (false인 경우 webview의 컨트롤 너비로 설정)
         webView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
-        webView.getSettings().setSupportMultipleWindows(true); // 카카오톡 설정
+        webView.getSettings().setSupportMultipleWindows(true); // 카카오톡 설정  다중 윈도우 허용(팝업을 위해 추가)
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); // 화면 세로고정
         getWindow().getDecorView().setSystemUiVisibility(
                 webView.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -105,9 +112,11 @@ public class MainActivity extends AppCompatActivity {
         timer.schedule(tt, 0 , 3000);
 
         webView.setWebViewClient(new WebViewClient() {
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) { // 페이지 컨트롤을 위한 기본적인 함수
-                if(url.startsWith("intent:")){ // 카카오톡 설정
+                Log.d(tag, "url =================================:" + url);
+                if (url.startsWith("intent:")) { // 카카오톡 설정
                     try {
                         Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
                         Intent existPackage = getPackageManager().getLaunchIntentForPackage(intent.getPackage());
@@ -124,13 +133,70 @@ public class MainActivity extends AppCompatActivity {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-                }else {
+                }else{
                     view.loadUrl(url);
                 }
                 return true;
             }
         });
         webView.setWebChromeClient(new WebChromeClient() { // js alert 띄우기 위해 추가해야함
+
+            // window.open 시 호출되는 함수
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+                WebView newWebView = new WebView(view.getContext());
+                WebSettings settings = newWebView.getSettings();
+                settings.setJavaScriptEnabled(true);
+                settings.setJavaScriptCanOpenWindowsAutomatically(true);
+                settings.setSupportMultipleWindows(true);
+
+                // 웹뷰를 띄워줄 다이얼로그
+                dialog = new Dialog(view.getContext(), R.style.Theme_Abc);
+                dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+                dialog.setContentView(newWebView);
+                dialog.show();
+                dialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
+                    // new webView 백버튼
+                    @Override
+                    public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+                        if(keyCode == KeyEvent.KEYCODE_BACK) {
+                            if(newWebView.canGoBack()){
+                                Log.d(tag , "onKey canGoBack.......");
+                                newWebView.goBack();
+                            }else{
+                                Log.d(tag , "onKey else.......");
+                                newWebView.setVisibility(View.GONE);
+                                newWebView.destroy();
+                                dialog.dismiss();
+                            }
+                            return true;
+                        }else{
+                            return false;
+                        }
+                    }
+                });
+                newWebView.setWebViewClient(new WebViewClient());
+                newWebView.setWebChromeClient(new WebChromeClient() {
+                    @Override
+                    public void onCloseWindow(WebView window) {
+                        Log.d(tag , "onCloseWindow .......");
+                        dialog.dismiss();
+                    }
+                });
+                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                transport.setWebView(newWebView);
+                resultMsg.sendToTarget();
+
+                return true;
+            }
+
+            @Override
+            public void onCloseWindow(WebView window) {
+                Log.d(tag , "Call onCloseWindow...");
+                window.setVisibility(View.GONE);
+                window.destroy();
+                super.onCloseWindow(window);
+            }
             @Override
             public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
                 return super.onJsAlert(view, url, message, result);
