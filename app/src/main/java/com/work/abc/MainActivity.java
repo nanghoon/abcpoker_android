@@ -21,6 +21,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.PowerManager;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
@@ -53,8 +54,8 @@ public class MainActivity extends AppCompatActivity {
 
     String tag = "ABC POKER";
     private WebView webView;
-    //private String url_main = "http://abc-pokertest.co.kr/abcpoker/allPage.do";
-    private String url_main = "http://183.102.237.232:8080/abcpoker/allPage.do";
+    private String url_main = "http://abc-pokertest.co.kr/abcpoker/allPage.do";
+    //private String url_main = "http://183.102.237.232:8080/abcpoker/allPage.do";
 
     public Dialog dialog = null;
     @Override
@@ -86,7 +87,20 @@ public class MainActivity extends AppCompatActivity {
         mainContext = this;
         billingManager = new BillingManager(MainActivity.this);
         // -- 결제
-        
+
+        // 배터리 최적화 설정 ( 화면 꺼져도 작동하도록 )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            String packageName = getPackageName();
+            PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                Intent intent = new Intent();
+                intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + packageName));
+                startActivity(intent);
+            }
+        }
+        // --
+
         Timer timer = new Timer();
         TimerTask tt = new TimerTask() {
             @Override
