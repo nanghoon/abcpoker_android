@@ -314,6 +314,30 @@ public class MainActivity extends AppCompatActivity {
 
     // ===== 로그인 정보 저장 관련
 
+    // 홈키 , 화면꺼짐 이벤트 처리
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // 음악 일시 정지 코드
+        webView.post(new Runnable() {
+            @Override
+            public void run() {
+                webView.loadUrl("javascript:soundStop()");
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 음악 재생 코드
+        webView.post(new Runnable() {
+            @Override
+            public void run() {
+                webView.loadUrl("javascript:soundStart()");
+            }
+        });
+    }
 
     // 카메라 / 파일
     // 파일 관련 함수
