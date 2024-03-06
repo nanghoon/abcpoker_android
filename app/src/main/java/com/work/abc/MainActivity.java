@@ -8,6 +8,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Dialog;
 import android.content.ComponentName;
@@ -350,106 +351,194 @@ public class MainActivity extends AppCompatActivity {
     public final static int FILECHOOSER_LOLLIPOP_REQ_CODE = 2002;
     // 권한 체킹
 
-    private void readFile(){
-        Log.d(tag , "function runCamera...");
+    private void readFile() {
+        Log.d(tag, "function runCamera...");
 
         Intent intentCamera = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         File path = getFilesDir();
         File file = new File(path, "fokCamera.png");
-        // File 객체의 URI 를 얻는다.
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
-        {
-            String strpa = getApplicationContext().getPackageName();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             cameraImageUri = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".fileprovider", file);
-        }
-        else
-        {
+        } else {
             cameraImageUri = Uri.fromFile(file);
         }
         intentCamera.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri);
 
-        // 선택팝업 카메라, 갤러리 둘다 띄우고 싶을 때..
-        Intent pickIntent = new Intent(Intent.ACTION_PICK);
-        pickIntent.setType(MediaStore.Images.Media.CONTENT_TYPE);
-        pickIntent.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        Intent pickIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        pickIntent.addCategory(Intent.CATEGORY_OPENABLE);
+        pickIntent.setType("image/*");
 
         String pickTitle = "사진 가져올 방법을 선택하세요.";
         Intent chooserIntent = Intent.createChooser(pickIntent, pickTitle);
 
-        // 카메라 intent 포함시키기..
-        //chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Parcelable[]{intentCamera});
+        Intent[] intentArray = {intentCamera};
+        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, intentArray);
+
         startActivityForResult(chooserIntent, FILECHOOSER_LOLLIPOP_REQ_CODE);
 
     }
 
+    //액티비티가 종료될 때 결과를 받고 파일을 전송할 때 사용
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    @SuppressLint("MissingSuperCall")
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        checkVerify();
+        switch (requestCode)
+        {
+            case FILECHOOSER_NORMAL_REQ_CODE:
+                if (resultCode == RESULT_OK)
+                {
+                    if (filePathCallbackNormal == null) return;
+                    Uri result = (data == null || resultCode != RESULT_OK) ? null : data.getData();
+                    filePathCallbackNormal.onReceiveValue(result);
+                    filePathCallbackNormal = null;
+                }
+                break;
+            case FILECHOOSER_LOLLIPOP_REQ_CODE:
+                if (resultCode == RESULT_OK)
+                {
+                    if (filePathCallbackLollipop == null) return;
+                    if (data == null)
+                        data = new Intent();
+                    if (data.getData() == null)
+                        data.setData(cameraImageUri);
+
+                    filePathCallbackLollipop.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+                    filePathCallbackLollipop = null;
+                }
+                else
+                {
+                    if (filePathCallbackLollipop != null)
+                    {
+                        filePathCallbackLollipop.onReceiveValue(null);
+                        filePathCallbackLollipop = null;
+                    }
+
+                    if (filePathCallbackNormal != null)
+                    {
+                        filePathCallbackNormal.onReceiveValue(null);
+                        filePathCallbackNormal = null;
+                    }
+                }
+                break;
+            default:
+
+                break;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+
+    }
+
+
     //권한 획득 여부 확인
     @TargetApi(Build.VERSION_CODES.M)
     public void checkVerify() {
-        Log.d(tag, "function check verify...");
-        if (checkSelfPermission(Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED ||
-                checkSelfPermission(Manifest.permission.ACCESS_NETWORK_STATE) != PackageManager.PERMISSION_GRANTED ||
-                checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
-                checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
-                checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            // 카메라 또는 저장공간 권한 획득 여부 확인
-            if (shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE) || shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
-                // 권한 요청 다이얼로그 표시
-                new AlertDialog.Builder(this)
-                        .setTitle("권한 요청")
-                        .setMessage("이미지 파일을 촬영하거나 업로드하려면 권한이 필요합니다.")
-                        .setPositiveButton("확인", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                requestPermissions(new String[]{Manifest.permission.INTERNET,
-                                        Manifest.permission.ACCESS_NETWORK_STATE,
-                                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                                        Manifest.permission.READ_EXTERNAL_STORAGE,
-                                        Manifest.permission.CAMERA}, REQUEST_CODE_FILE);
-                            }
-                        })
-                        .setNegativeButton("취소", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                // 사용자가 권한을 거부하면 아무것도 하지 않음
-                            }
-                        })
-                        .create()
-                        .show();
-            } else {
-                // 권한 요청 다이얼로그 표시
-                requestPermissions(new String[]{Manifest.permission.INTERNET,
-                        Manifest.permission.ACCESS_NETWORK_STATE,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                        Manifest.permission.READ_EXTERNAL_STORAGE,
-                        Manifest.permission.CAMERA}, REQUEST_CODE_FILE);
+        Log.d(tag, "function check verify... Build.VERSION.SDK_INT : " + Build.VERSION.SDK_INT + " , Build.VERSION_CODES.M : " + Build.VERSION_CODES.M + " , Build.VERSION_CODES.Q : " + Build.VERSION_CODES.Q);
+
+        // 안드로이드 6이상부터 권한체크 필요
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // 안드로이드 10 이상
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_NETWORK_STATE) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+
+                if (shouldShowRequestPermissionRationale(android.Manifest.permission.CAMERA) ||
+                        shouldShowRequestPermissionRationale(android.Manifest.permission.INTERNET) ||
+                        shouldShowRequestPermissionRationale(android.Manifest.permission.ACCESS_NETWORK_STATE)) {
+
+                    new AlertDialog.Builder(this)
+                            .setTitle("권한 요청")
+                            .setMessage("이미지 파일을 촬영하거나 업로드하려면 권한이 필요합니다.")
+                            .setPositiveButton("확인", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    requestPermissions(new String[]{android.Manifest.permission.INTERNET,
+                                            android.Manifest.permission.ACCESS_NETWORK_STATE,
+                                            android.Manifest.permission.CAMERA}, REQUEST_CODE_FILE);
+                                }
+                            })
+                            .setNegativeButton("취소", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    // 사용자가 권한을 거부하면 아무것도 하지 않음
+                                }
+                            })
+                            .create()
+                            .show();
+                } else {
+                    requestPermissions(new String[]{android.Manifest.permission.INTERNET,
+                            android.Manifest.permission.ACCESS_NETWORK_STATE,
+                            android.Manifest.permission.CAMERA}, REQUEST_CODE_FILE);
+                }
+            }
+        }else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { // 안드로이드 6 이상
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_NETWORK_STATE) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+
+                if ( shouldShowRequestPermissionRationale(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) ||
+                        shouldShowRequestPermissionRationale(android.Manifest.permission.CAMERA) ||
+                        shouldShowRequestPermissionRationale(android.Manifest.permission.READ_EXTERNAL_STORAGE) ||
+                        shouldShowRequestPermissionRationale(android.Manifest.permission.INTERNET) ||
+                        shouldShowRequestPermissionRationale(android.Manifest.permission.ACCESS_NETWORK_STATE)) {
+
+                    new AlertDialog.Builder(this)
+                            .setTitle("권한 요청")
+                            .setMessage("이미지 파일을 촬영하거나 업로드하려면 권한이 필요합니다.")
+                            .setPositiveButton("확인", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    requestPermissions(new String[]{android.Manifest.permission.INTERNET,
+                                            android.Manifest.permission.ACCESS_NETWORK_STATE,
+                                            android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                            android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                                            android.Manifest.permission.CAMERA}, REQUEST_CODE_FILE);
+                                }
+                            })
+                            .setNegativeButton("취소", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    // 사용자가 권한을 거부하면 아무것도 하지 않음
+                                }
+                            })
+                            .create()
+                            .show();
+                } else {
+                    requestPermissions(new String[]{android.Manifest.permission.INTERNET,
+                            android.Manifest.permission.ACCESS_NETWORK_STATE,
+                            android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                            android.Manifest.permission.CAMERA}, REQUEST_CODE_FILE);
+                }
             }
         }
     }
 
+
     //권한 획득 여부에 따른 결과 반환
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
-    {
-        Log.d(tag , " ON NEW INTENT :::: onRequestPermissionsResult  requestCode : " + requestCode + " ,,,, REQUEST_CODE_FILE ::: " + REQUEST_CODE_FILE);
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        Log.d(tag, " ON NEW INTENT :::: onRequestPermissionsResult  requestCode : " + requestCode + " ,,,, REQUEST_CODE_FILE ::: " + REQUEST_CODE_FILE);
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 1)
-        {
-            if (grantResults.length > 0)
-            {
-                for (int i=0; i<grantResults.length; ++i)
-                {
-                    if (grantResults[i] == PackageManager.PERMISSION_DENIED)
-                    {
-                        // 카메라, 저장소 중 하나라도 거부한다면 앱실행 불가 메세지 띄움
-                        new AlertDialog.Builder(this).setTitle("알림").setMessage("권한을 허용해주셔야 앱을 이용할 수 있습니다.")
+
+        if (requestCode == 1) {
+            if (grantResults.length > 0) {
+                for (int i = 0; i < grantResults.length; ++i) {
+                    if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
+                        new AlertDialog.Builder(this)
+                                .setTitle("알림")
+                                .setMessage("권한을 허용해주셔야 앱을 이용할 수 있습니다.")
                                 .setPositiveButton("종료", new DialogInterface.OnClickListener() {
                                     public void onClick(DialogInterface dialog, int which) {
                                         dialog.dismiss();
                                         finish();
                                     }
-                                }).setNegativeButton("권한 설정", new DialogInterface.OnClickListener() {
+                                })
+                                .setNegativeButton("권한 설정", new DialogInterface.OnClickListener() {
                                     public void onClick(DialogInterface dialog, int which) {
                                         dialog.dismiss();
                                         Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
@@ -457,14 +546,15 @@ public class MainActivity extends AppCompatActivity {
                                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                                         getApplicationContext().startActivity(intent);
                                     }
-                                }).setCancelable(false).show();
+                                })
+                                .setCancelable(false)
+                                .show();
                         return;
                     }
                 }
-                //Toast.makeText(this, "Succeed Read/Write external storage !", Toast.LENGTH_SHORT).show();
-                //startApp();
             }
         }
+
         if (requestCode == REQUEST_CODE_FILE) {
             checkVerify();
         }
