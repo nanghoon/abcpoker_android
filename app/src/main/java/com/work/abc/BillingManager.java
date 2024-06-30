@@ -102,12 +102,12 @@ public class BillingManager implements PurchasesUpdatedListener {
     public void getSkuDetailList() {
         Log.e(TAG, "biilingcount3");
         List<String> skuList = new ArrayList<>();
-        skuList.add("c_0");
-        skuList.add("c_1");
-        skuList.add("c_2");
-        skuList.add("c_3");
-        skuList.add("c_4");
-        skuList.add("c_5");
+        skuList.add("c_10000");
+        skuList.add("c_30000");
+        skuList.add("c_50000");
+        skuList.add("c_70000");
+        skuList.add("c_100000");
+        //skuList.add("c_5");
         SkuDetailsParams.Builder params = SkuDetailsParams.newBuilder();
         params.setSkusList(skuList).setType(BillingClient.SkuType.INAPP);//.INAPP은 일회용 결제고, SUBS는 구독형 결제에요~
         billingClient.querySkuDetailsAsync(params.build(),

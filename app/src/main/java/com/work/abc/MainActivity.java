@@ -75,6 +75,11 @@ public class MainActivity extends AppCompatActivity {
         webView.getSettings().setUseWideViewPort(true); // 메타태그지원활성화 or 넓은 뷰포트 사용 설정 (false인 경우 webview의 컨트롤 너비로 설정)
         webView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
         webView.getSettings().setSupportMultipleWindows(true); // 카카오톡 설정  다중 윈도우 허용(팝업을 위해 추가)
+
+        // 웹 모바일과 웹뷰구분을 위해 추가
+        String userAgent = webView.getSettings().getUserAgentString();
+        webView.getSettings().setUserAgentString(userAgent+"_WEBVIEW");
+
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); // 화면 세로고정
         getWindow().getDecorView().setSystemUiVisibility(
                 webView.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -351,34 +356,40 @@ public class MainActivity extends AppCompatActivity {
     public final static int FILECHOOSER_LOLLIPOP_REQ_CODE = 2002;
     // 권한 체킹
 
-    private void readFile() {
-        Log.d(tag, "function runCamera...");
+    private void readFile(){
+        Log.d(tag , "function runCamera...");
 
         Intent intentCamera = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         File path = getFilesDir();
-        File file = new File(path, "fokCamera.png");
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        File file = new File(path, "fokCamera"+System.currentTimeMillis()+".png");
+        // File 객체의 URI 를 얻는다.
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+        {
+            String strpa = getApplicationContext().getPackageName();
             cameraImageUri = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".fileprovider", file);
-        } else {
+        }
+        else
+        {
             cameraImageUri = Uri.fromFile(file);
         }
         intentCamera.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri);
 
-        Intent pickIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        pickIntent.addCategory(Intent.CATEGORY_OPENABLE);
-        pickIntent.setType("image/*");
+        // 선택팝업 카메라, 갤러리 둘다 띄우고 싶을 때..
+        Intent pickIntent = new Intent(Intent.ACTION_PICK);
+        pickIntent.setType(MediaStore.Images.Media.CONTENT_TYPE);
+        pickIntent.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
 
         String pickTitle = "사진 가져올 방법을 선택하세요.";
         Intent chooserIntent = Intent.createChooser(pickIntent, pickTitle);
 
-        Intent[] intentArray = {intentCamera};
-        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, intentArray);
-
+        // 카메라 intent 포함시키기..
+        //chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Parcelable[]{intentCamera});
         startActivityForResult(chooserIntent, FILECHOOSER_LOLLIPOP_REQ_CODE);
 
     }
+
 
     //액티비티가 종료될 때 결과를 받고 파일을 전송할 때 사용
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -432,11 +443,10 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-
     //권한 획득 여부 확인
     @TargetApi(Build.VERSION_CODES.M)
     public void checkVerify() {
-        Log.d(tag, "function check verify... Build.VERSION.SDK_INT : " + Build.VERSION.SDK_INT + " , Build.VERSION_CODES.M : " + Build.VERSION_CODES.M + " , Build.VERSION_CODES.Q : " + Build.VERSION_CODES.Q);
+        Log.d(tag, "function check verify...");
 
         // 안드로이드 6이상부터 권한체크 필요
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // 안드로이드 10 이상
@@ -448,7 +458,7 @@ public class MainActivity extends AppCompatActivity {
                         shouldShowRequestPermissionRationale(android.Manifest.permission.INTERNET) ||
                         shouldShowRequestPermissionRationale(android.Manifest.permission.ACCESS_NETWORK_STATE)) {
 
-                    new AlertDialog.Builder(this)
+                    new android.app.AlertDialog.Builder(this)
                             .setTitle("권한 요청")
                             .setMessage("이미지 파일을 촬영하거나 업로드하려면 권한이 필요합니다.")
                             .setPositiveButton("확인", new DialogInterface.OnClickListener() {
@@ -486,7 +496,7 @@ public class MainActivity extends AppCompatActivity {
                         shouldShowRequestPermissionRationale(android.Manifest.permission.INTERNET) ||
                         shouldShowRequestPermissionRationale(android.Manifest.permission.ACCESS_NETWORK_STATE)) {
 
-                    new AlertDialog.Builder(this)
+                    new android.app.AlertDialog.Builder(this)
                             .setTitle("권한 요청")
                             .setMessage("이미지 파일을 촬영하거나 업로드하려면 권한이 필요합니다.")
                             .setPositiveButton("확인", new DialogInterface.OnClickListener() {
@@ -518,27 +528,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     //권한 획득 여부에 따른 결과 반환
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        Log.d(tag, " ON NEW INTENT :::: onRequestPermissionsResult  requestCode : " + requestCode + " ,,,, REQUEST_CODE_FILE ::: " + REQUEST_CODE_FILE);
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
+    {
+        Log.d(tag , " ON NEW INTENT :::: onRequestPermissionsResult  requestCode : " + requestCode + " ,,,, REQUEST_CODE_FILE ::: " + REQUEST_CODE_FILE);
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == 1) {
-            if (grantResults.length > 0) {
-                for (int i = 0; i < grantResults.length; ++i) {
-                    if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
-                        new AlertDialog.Builder(this)
-                                .setTitle("알림")
-                                .setMessage("권한을 허용해주셔야 앱을 이용할 수 있습니다.")
+        if (requestCode == 1)
+        {
+            if (grantResults.length > 0)
+            {
+                for (int i=0; i<grantResults.length; ++i)
+                {
+                    if (grantResults[i] == PackageManager.PERMISSION_DENIED)
+                    {
+                        // 카메라, 저장소 중 하나라도 거부한다면 앱실행 불가 메세지 띄움
+                        new AlertDialog.Builder(this).setTitle("알림").setMessage("권한을 허용해주셔야 앱을 이용할 수 있습니다.")
                                 .setPositiveButton("종료", new DialogInterface.OnClickListener() {
                                     public void onClick(DialogInterface dialog, int which) {
                                         dialog.dismiss();
                                         finish();
                                     }
-                                })
-                                .setNegativeButton("권한 설정", new DialogInterface.OnClickListener() {
+                                }).setNegativeButton("권한 설정", new DialogInterface.OnClickListener() {
                                     public void onClick(DialogInterface dialog, int which) {
                                         dialog.dismiss();
                                         Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
@@ -546,15 +557,14 @@ public class MainActivity extends AppCompatActivity {
                                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                                         getApplicationContext().startActivity(intent);
                                     }
-                                })
-                                .setCancelable(false)
-                                .show();
+                                }).setCancelable(false).show();
                         return;
                     }
                 }
+                //Toast.makeText(this, "Succeed Read/Write external storage !", Toast.LENGTH_SHORT).show();
+                //startApp();
             }
         }
-
         if (requestCode == REQUEST_CODE_FILE) {
             checkVerify();
         }
